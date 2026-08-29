@@ -85,9 +85,29 @@ even though no OpenRGB CLI flag for it ever existed.
 
 ## Install
 
-The backend (daemon, systemd units, udev rule) has to be set up by hand
-first — paths and the `arrow` username in there are specific to my machine,
-adjust for yours:
+```bash
+omarchy plugin add https://github.com/Hi-im-Connect/omarchy-mouse-rgb.git --enable
+```
+
+The command clones the repo into `~/.config/omarchy/plugins/`, validates it,
+and asks where in the bar you want it. Plugins land disabled by default so
+you can read the code first — `--enable` turns it on in the same step, or do
+it separately:
+
+```bash
+omarchy plugin enable arrow.mouse-rgb
+```
+
+Plugins run unsandboxed inside the Omarchy shell process, so only add repos
+you trust. Unlike a typical plugin, this one isn't self-contained — the
+panel is only half of it. It talks to a daemon over a local socket, and that
+daemon has to be installed by hand first: it owns the OpenRGB connection,
+runs as a `systemd --user` service, and its resume-from-sleep hook needs
+`sudo` to install into `/usr/lib/systemd/system-sleep/`. None of that runs
+as a side effect of `plugin add` — it's a separate step below, and paths and
+the `arrow` username in it are specific to my machine, so adjust for yours.
+
+### Backend
 
 ```bash
 python3 -m venv ~/.local/share/mouse-rgb/venv
@@ -109,13 +129,6 @@ sudo udevadm control --reload-rules
 Also needs [`libratbag`](https://github.com/libratbag/libratbag) (`ratbagd`
 + `ratbagctl`) for the DPI/polling-rate section — D-Bus activated, no manual
 start needed.
-
-Then the plugin itself installs the normal Omarchy way:
-
-```bash
-omarchy plugin add https://github.com/Hi-im-Connect/omarchy-mouse-rgb.git --enable
-omarchy bar put arrow.mouse-rgb --after omarchy.tray
-```
 
 If `Model.js`'s `HELPER_PYTHON`/`HELPER_SCRIPT` paths at the top don't match
 where you put the venv and `mouse_rgb.py` above, edit those two lines after
