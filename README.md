@@ -1,12 +1,14 @@
-# mouse-rgb-g203
+# omarchy-mouse-rgb
 
-Full RGB, DPI, and polling-rate control for a **Logitech G203/G102 Lightsync**
-on an [Omarchy](https://omarchy.org/) (Hyprland) desktop, as a native bar
+Full RGB, DPI, and polling-rate control for a **Logitech G203/G102
+Lightsync**, as a native [Omarchy](https://omarchy.org/) (Hyprland) bar
 widget — built because `openrgb`'s CLI is unusable for this device and its
 GUI doesn't belong in a tiling-WM bar.
 
 ![mode](https://img.shields.io/badge/modes-9-informational)
 ![backend](https://img.shields.io/badge/backend-OpenRGB%20SDK-blue)
+
+<img src="docs-assets/panel-solid.png" alt="The bar widget in Solid mode: mode grid, per-LED color pickers, hue and saturation sliders, brightness, DPI, and polling rate" width="370">
 
 ## Why this exists
 
@@ -47,14 +49,18 @@ wouldn't have caught:
 
 ## What's here
 
+This repo *is* the Omarchy plugin — `manifest.json` is at the root, so it
+installs directly with `omarchy plugin add`. `backend/` holds the daemon it
+talks to, which isn't part of the plugin bundle itself.
+
 | Path | What it is |
 |---|---|
-| `mouse_rgb.py` | The daemon. Owns the OpenRGB SDK connection, serializes RGB + DPI/rate access, runs the Direct-mode heartbeat, animates the two software-only effects. |
-| `plugin/` | The Omarchy shell bar widget (QML), talking to the daemon via `apply`/`status`/`dpi`/`rate` subcommands. |
-| `systemd/openrgb-server.service` | Runs `openrgb --server` (the SDK server). |
-| `systemd/mouse-rgb-effect.service` | Runs the daemon. |
-| `systemd/51-mouse-rgb-resume` | Resume-from-sleep hook — **must** live in `/usr/lib/systemd/system-sleep/`, not `/etc` (see note below). |
-| `udev/99-mouse-rgb-recover.rules` + `bin/mouse-rgb-recover` | Restarts the RGB stack if the mouse actually re-enumerates (unplug/replug), which changes its hidraw node. |
+| `manifest.json`, `Panel.qml`, `Model.js` | The bar widget itself. |
+| `backend/mouse_rgb.py` | The daemon. Owns the OpenRGB SDK connection, serializes RGB + DPI/rate access, runs the Direct-mode heartbeat, animates the two software-only effects. |
+| `backend/systemd/openrgb-server.service` | Runs `openrgb --server` (the SDK server). |
+| `backend/systemd/mouse-rgb-effect.service` | Runs the daemon. |
+| `backend/systemd/51-mouse-rgb-resume` | Resume-from-sleep hook — **must** live in `/usr/lib/systemd/system-sleep/`, not `/etc` (see note below). |
+| `backend/udev/99-mouse-rgb-recover.rules` + `backend/bin/mouse-rgb-recover` | Restarts the RGB stack if the mouse actually re-enumerates (unplug/replug), which changes its hidraw node. |
 
 ## Modes
 
@@ -79,34 +85,41 @@ even though no OpenRGB CLI flag for it ever existed.
 
 ## Install
 
-Paths and the `arrow` username throughout are specific to my machine — this
-is a working reference, not a generic installer. Adjust for yours.
+The backend (daemon, systemd units, udev rule) has to be set up by hand
+first — paths and the `arrow` username in there are specific to my machine,
+adjust for yours:
 
 ```bash
 python3 -m venv ~/.local/share/mouse-rgb/venv
-~/.local/share/mouse-rgb/venv/bin/pip install -r requirements.txt
-cp mouse_rgb.py ~/.local/share/mouse-rgb/
+~/.local/share/mouse-rgb/venv/bin/pip install -r backend/requirements.txt
+cp backend/mouse_rgb.py ~/.local/share/mouse-rgb/
 
-cp systemd/openrgb-server.service systemd/mouse-rgb-effect.service ~/.config/systemd/user/
+cp backend/systemd/openrgb-server.service backend/systemd/mouse-rgb-effect.service ~/.config/systemd/user/
 systemctl --user enable --now openrgb-server.service mouse-rgb-effect.service
 
-sudo cp systemd/51-mouse-rgb-resume /usr/lib/systemd/system-sleep/
+sudo cp backend/systemd/51-mouse-rgb-resume /usr/lib/systemd/system-sleep/
 sudo chmod 755 /usr/lib/systemd/system-sleep/51-mouse-rgb-resume
 
-sudo cp bin/mouse-rgb-recover /usr/local/bin/
+sudo cp backend/bin/mouse-rgb-recover /usr/local/bin/
 sudo chmod 755 /usr/local/bin/mouse-rgb-recover
-sudo cp udev/99-mouse-rgb-recover.rules /etc/udev/rules.d/
+sudo cp backend/udev/99-mouse-rgb-recover.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules
-
-mkdir -p ~/.config/omarchy/plugins/arrow.mouse-rgb
-cp plugin/* ~/.config/omarchy/plugins/arrow.mouse-rgb/
-omarchy bar put arrow.mouse-rgb --after omarchy.tray
-omarchy restart shell
 ```
 
 Also needs [`libratbag`](https://github.com/libratbag/libratbag) (`ratbagd`
 + `ratbagctl`) for the DPI/polling-rate section — D-Bus activated, no manual
 start needed.
+
+Then the plugin itself installs the normal Omarchy way:
+
+```bash
+omarchy plugin add https://github.com/Hi-im-Connect/omarchy-mouse-rgb.git --enable
+omarchy bar put arrow.mouse-rgb --after omarchy.tray
+```
+
+If `Model.js`'s `HELPER_PYTHON`/`HELPER_SCRIPT` paths at the top don't match
+where you put the venv and `mouse_rgb.py` above, edit those two lines after
+installing.
 
 ### The `/etc` vs `/usr/lib` trap
 
