@@ -1,0 +1,30 @@
+#!/bin/bash
+# Force the mouse RGB daemon to resend its current state after resume.
+#
+# Every suspend issues a USB reset on the mouse (confirmed in this system's
+# own logs: "usb 1-8: reset high-speed USB device ... using xhci_hcd", and
+# reproduced directly with the USBDEVFS_RESET ioctl -- devnum and the
+# hidraw node both stay unchanged). That reset reboots the mouse's onboard
+# controller and wipes the Direct-mode LED state back to hardware default,
+# but it is a reset, not a disconnect: no new device node, no udev "add"
+# event, so 99-mouse-rgb-recover.rules (which only fires on "add") never
+# sees it.
+#
+# mouse_rgb.py's effectd loop only re-applies state when state.json's mtime
+# changes, so a silent hardware reset leaves it believing everything is
+# still correctly applied. Touching the file is enough to make the next
+# poll (at most POLL_INTERVAL) resend the exact same state to the device --
+# no service restart needed, since the OpenRGB server's handle to the
+# hidraw node is still valid.
+
+case "$1" in
+  post) ;;
+  *) exit 0 ;;
+esac
+
+state="/home/arrow/.local/share/mouse-rgb/state.json"
+[ -f "$state" ] || exit 0
+
+runuser -u arrow -- touch "$state" 2>/dev/null || true
+
+exit 0

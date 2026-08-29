@@ -1,0 +1,25 @@
+#!/bin/bash
+# Restart the RGB stack shortly after the mouse reappears on USB.
+#
+# OpenRGB opens the mouse's hidraw node once, when the server starts, and
+# never re-opens it. If the mouse re-enumerates -- a replug, or the hub it
+# sits on power-cycling -- the node number changes and the server goes on
+# writing into a handle for a node that no longer exists. The failure is
+# silent and misleading: `openrgb --list-devices` still lists the mouse,
+# the panel still reports "connected", and the LEDs simply stop responding.
+# The only cure is to restart the server so it enumerates again.
+#
+# udev kills long-running RUN children, so the actual work is handed to a
+# transient timer instead of being done inline. The fixed unit name is also
+# the debounce: this mouse creates several hidraw nodes on one plug event,
+# and every one of them triggers this script, but only the first schedules
+# the timer -- the rest fail to claim the name and are dropped.
+
+uid=$(id -u arrow 2>/dev/null) || exit 0
+
+systemd-run --quiet --collect --unit=mouse-rgb-recover --on-active=5s \
+  runuser -u arrow -- env XDG_RUNTIME_DIR="/run/user/$uid" \
+  systemctl --user restart openrgb-server.service mouse-rgb-effect.service \
+  2>/dev/null || true
+
+exit 0

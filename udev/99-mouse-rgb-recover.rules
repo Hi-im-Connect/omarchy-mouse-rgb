@@ -1,0 +1,4 @@
+# Re-enumerate the RGB stack when the G203 Lightsync reappears on USB.
+# Keyed on hidraw rather than the usb_device, because the hidraw node is
+# exactly what OpenRGB needs to exist before it can enumerate.
+ACTION=="add", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="046d", ATTRS{idProduct}=="c092", RUN+="/usr/local/bin/mouse-rgb-recover"

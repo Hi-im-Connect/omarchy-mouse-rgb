@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "arrow.mouse-rgb",
+  "name": "Mouse RGB",
+  "version": "1.0.0",
+  "author": "arrow",
+  "description": "OpenRGB control for the Logitech G203 Lightsync — mode, color, speed, brightness",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Mouse RGB",
+    "description": "OpenRGB control for the Logitech G203 Lightsync",
+    "category": "Hardware",
+    "allowMultiple": false
+  }
+}

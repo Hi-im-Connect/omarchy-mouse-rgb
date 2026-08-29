@@ -1,0 +1,13 @@
+[Unit]
+Description=Mouse RGB effect daemon (owns the OpenRGB device connection)
+After=openrgb-server.service
+Wants=openrgb-server.service
+
+[Service]
+Type=simple
+ExecStart=%h/.local/share/mouse-rgb/venv/bin/python %h/.local/share/mouse-rgb/mouse_rgb.py effectd
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=default.target
